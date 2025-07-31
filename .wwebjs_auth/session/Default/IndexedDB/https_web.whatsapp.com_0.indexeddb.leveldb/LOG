@@ -1,0 +1,13 @@
+2025/07/29-21:04:19.782 367c Reusing MANIFEST C:\Users\hyan_\Desktop\Projetos\Bot_Pizzaria\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/29-21:04:19.783 367c Recovering log #89
+2025/07/29-21:04:19.826 367c Reusing old log C:\Users\hyan_\Desktop\Projetos\Bot_Pizzaria\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000089.log 
+2025/07/29-21:04:21.831 1158 Level-0 table #94: started
+2025/07/29-21:04:21.844 1158 Level-0 table #94: 324772 bytes OK
+2025/07/29-21:04:21.846 1158 Delete type=0 #89
+2025/07/29-21:04:21.847 1158 Manual compaction at level-0 from '\x00(\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00)\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/07/29-21:04:25.107 1158 Compacting 1@1 + 1@2 files
+2025/07/29-21:04:25.221 1158 Generated table #95@1: 42108 keys, 1593512 bytes
+2025/07/29-21:04:25.221 1158 Compacted 1@1 + 1@2 files => 1593512 bytes
+2025/07/29-21:04:25.222 1158 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/29-21:04:25.222 1158 Delete type=2 #91
+2025/07/29-21:04:25.222 1158 Delete type=2 #94
