@@ -1,3 +1,4 @@
+process.env.DEBUG = 'puppeteer:*';
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const axios = require('axios');
 
