@@ -9,7 +9,7 @@ const client = new Client({
 client.on('qr', async (qr) => {
 
     try {
-            await axios.post('http://localhost:3000/qr', {qr})
+            await axios.post('https://projetolistaapi-production.up.railway.app/qr', {qr})
             console.log("QRcode enviado");
         }
         catch (error) {
