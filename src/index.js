@@ -31,6 +31,11 @@ client.on('qr', async (qr) => {
         };
 });
 
+client.on('ready', () => {
+    console.log('WhatsApp pronto!');
+});
+
+
 client.on('message', async msg => {
     console.log(`Mensagem de ${msg.from}: ${msg.body}`);
 
