@@ -31,6 +31,15 @@ client.on('qr', async (qr) => {
         };
 });
 
+client.on('loading_screen', (percent, message) => {
+    console.log(`Carregando WhatsApp... ${percent}% - ${message}`);
+});
+
+client.on('auth_failure', msg => {
+    console.error('Falha na autenticação:', msg);
+});
+
+
 client.on('ready', () => {
     console.log('WhatsApp pronto!');
 });
