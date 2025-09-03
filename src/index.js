@@ -38,7 +38,7 @@ client.on('message', async msg => {
     if (msg.body === 'Lista' || msg.body === 'lista') {
 
         try {
-            const resposta = await axios.get('http://localhost:3000/')
+            const resposta = await axios.get('https://projetolistaapi-production.up.railway.app/')
             await msg.reply(resposta.data)
         }
         catch (error) {
