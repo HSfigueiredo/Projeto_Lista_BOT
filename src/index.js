@@ -4,13 +4,18 @@ const axios = require('axios');
 
 
 const client = new Client({
-    authStrategy: new LocalAuth({ clientId: "bot1" }),
     puppeteer: {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    }
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-extensions',
+            '--disable-gpu'
+        ]
+    },
+    authStrategy: new LocalAuth()
 });
-
 
 client.on('qr', async (qr) => {
 
