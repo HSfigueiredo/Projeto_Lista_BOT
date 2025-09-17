@@ -20,7 +20,7 @@ const client = new Client({
 client.on('qr', async (qr) => {
 
     try {
-            await axios.post('https://projetolistaapi-production.up.railway.app/qr', {qr})
+            await axios.post('http://201.23.69.230:3000/qr', {qr})
         }
         catch (error) {
             console.error(error.message);
@@ -48,7 +48,7 @@ client.on('message', async msg => {
     if (msg.body === 'Lista' || msg.body === 'lista') {
 
         try {
-            const resposta = await axios.get('https://projetolistaapi-production.up.railway.app/')
+            const resposta = await axios.get('http://201.23.69.230:3000/')
             await msg.reply(resposta.data)
         }
         catch (error) {
