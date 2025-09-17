@@ -1,4 +1,3 @@
-process.env.DEBUG = 'puppeteer:*';
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const axios = require('axios');
 
@@ -12,16 +11,16 @@ const client = new Client({
             '--disable-dev-shm-usage',
             '--disable-extensions',
             '--disable-gpu'
-        ]
+        ],
+	dumpio: false
     },
-    authStrategy: new LocalAuth()
+    authStrategy: new LocalAuth({ clientId: "bot_lista", dataPath: "./sessions" })
 });
 
 client.on('qr', async (qr) => {
 
     try {
             await axios.post('https://projetolistaapi-production.up.railway.app/qr', {qr})
-            console.log("QRcode enviado");
         }
         catch (error) {
             console.error(error.message);

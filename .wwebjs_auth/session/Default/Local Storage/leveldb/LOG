@@ -1,3 +1,13 @@
-2025/07/29-21:04:19.174 1158 Reusing MANIFEST C:\Users\hyan_\Desktop\Projetos\Bot_Pizzaria\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
-2025/07/29-21:04:19.176 1158 Recovering log #6
-2025/07/29-21:04:19.176 1158 Reusing old log C:\Users\hyan_\Desktop\Projetos\Bot_Pizzaria\.wwebjs_auth\session\Default\Local Storage\leveldb/000006.log 
+2025/09/17-00:19:16.337 49cf Recovering log #12
+2025/09/17-00:19:16.337 49cf Level-0 table #14: started
+2025/09/17-00:19:16.339 49cf Level-0 table #14: 1116 bytes OK
+2025/09/17-00:19:16.343 49cf Delete type=3 #10
+2025/09/17-00:19:16.343 49cf Delete type=0 #12
+2025/09/17-00:19:16.343 49cf Compacting 4@0 + 0@1 files
+2025/09/17-00:19:16.350 49cf Generated table #16@0: 13 keys, 1334 bytes
+2025/09/17-00:19:16.350 49cf Compacted 4@0 + 0@1 files => 1334 bytes
+2025/09/17-00:19:16.355 49cf compacted to: files[ 0 1 0 0 0 0 0 ]
+2025/09/17-00:19:16.355 49cf Delete type=2 #11
+2025/09/17-00:19:16.355 49cf Delete type=2 #5
+2025/09/17-00:19:16.355 49cf Delete type=2 #14
+2025/09/17-00:19:16.355 49cf Delete type=2 #8
