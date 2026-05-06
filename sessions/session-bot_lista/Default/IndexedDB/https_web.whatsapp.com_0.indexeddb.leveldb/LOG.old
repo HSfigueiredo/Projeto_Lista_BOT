@@ -1,22 +1,3 @@
-2025/09/17-16:01:06.712 5e81 Recovering log #119
-2025/09/17-16:01:06.724 5e81 Level-0 table #124: started
-2025/09/17-16:01:06.728 5e81 Level-0 table #124: 81497 bytes OK
-2025/09/17-16:01:06.732 5e81 Delete type=3 #116
-2025/09/17-16:01:06.732 5e81 Delete type=0 #119
-2025/09/17-16:01:08.296 5e55 Moved #124 to level-1 81497 bytes OK: files[ 0 1 1 0 0 0 0 ]
-2025/09/17-16:01:08.801 5e4e Compacting 1@1 + 1@2 files
-2025/09/17-16:01:08.828 5e4e Generated table #126@1: 15323 keys, 560205 bytes
-2025/09/17-16:01:08.828 5e4e Compacted 1@1 + 1@2 files => 560205 bytes
-2025/09/17-16:01:08.829 5e4e compacted to: files[ 0 0 1 0 0 0 0 ]
-2025/09/17-16:01:08.829 5e4e Delete type=2 #124
-2025/09/17-16:01:08.829 5e4e Delete type=2 #122
-2025/09/17-16:01:08.848 5e55 Level-0 table #128: started
-2025/09/17-16:01:08.850 5e55 Level-0 table #128: 12677 bytes OK
-2025/09/17-16:01:08.851 5e55 Delete type=0 #125
-2025/09/17-16:01:08.852 5e55 Manual compaction at level-0 from '\x002\x00\x00\x00' @ 72057594037927935 : 1 .. '\x003\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/09/17-16:01:13.442 5e55 Compacting 1@1 + 1@2 files
-2025/09/17-16:01:13.474 5e55 Generated table #129@1: 15495 keys, 564659 bytes
-2025/09/17-16:01:13.474 5e55 Compacted 1@1 + 1@2 files => 564659 bytes
-2025/09/17-16:01:13.474 5e55 compacted to: files[ 0 0 1 0 0 0 0 ]
-2025/09/17-16:01:13.475 5e55 Delete type=2 #126
-2025/09/17-16:01:13.475 5e55 Delete type=2 #128
+2026/05/06-17:23:45.742 36e4 Reusing MANIFEST /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-007517
+2026/05/06-17:23:45.744 36e4 Recovering log #7577
+2026/05/06-17:23:45.761 36e4 Reusing old log /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/007577.log 

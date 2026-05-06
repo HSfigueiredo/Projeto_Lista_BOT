@@ -1,1 +1,16 @@
-node_modules
+# Dependencias
+node_modules/
+
+# Sessao do WhatsApp
+sessions/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Chrome baixado pelo puppeteer
+chrome/
+
+# Variaveis de ambiente
+.env
+
+# Logs
+*.log

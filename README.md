@@ -1,23 +1,43 @@
-# 🤖 Automação WhatsApp – Gerenciamento de Compras e Estoque
+# 🤖 Assistente Pessoal WhatsApp
 
-Este projeto consiste em uma automação via WhatsApp que se integra a uma API para facilitar o controle de estoque e a organização de listas de compras.
-Ele permite que o usuário envie mensagens com comandos simples para interagir com o sistema, consultar listas e organizar o dia a dia diretamente pelo WhatsApp.
+Bot que conecta o WhatsApp a uma inteligência artificial (DeepSeek) para funcionar como assistente pessoal direto pelo celular. Receberá atualizações contínuas com novos comandos e funcionalidades para auxílio doméstico, pessoal e profissional.
 
 ## ✨ Funcionalidades
 
-- Reconhecimento de comandos como `lista`, `cadastrar` etc.
-- Integração com API local para obter respostas dinâmicas
-- Resposta automática no próprio chat do usuário
+- **`/ia SUA PERGUNTA`** — Consulta a IA DeepSeek com respostas precisas e raciocínio
+- **`/atk NUMERO QTD MSG`** — Envio programado de mensagens
+- **`/stop`** — Interrompe ação em andamento
+- **`/help`** — Lista todos os comandos disponíveis
 
-## 🚀 Como Funciona
+## 🚀 Como funciona
 
-1. O bot escuta mensagens recebidas no WhatsApp.
-2. Ao detectar um comando como `lista`, ele realiza uma requisição à API.
-3. A resposta da API é enviada automaticamente ao usuário no WhatsApp.
+1. Escaneie o QR Code com o WhatsApp
+2. Envie comandos diretamente no chat do bot
+3. O bot se comunica com a API local, que consulta a DeepSeek ou executa ações
+4. A resposta volta automaticamente para você
 
-## 🔧 Tecnologias Utilizadas
+## 🔧 Tecnologias
 
 - [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)
 - Node.js
-- axios
-- qrcode-terminal
+- Axios
+- DeepSeek API
+
+## ⚙️ Como usar
+
+```bash
+cp .env.example .env
+# Edite .env se necessário
+npm install
+npm start
+```
+
+## 🧩 Próximas atualizações
+
+O projeto está em evolução constante. Novos comandos serão adicionados para cobrir:
+
+- Lembretes e alarmes
+- Tradutor integrado
+- Resumo de textos e links
+- Integração com calendário e tarefas
+- Automações residenciais

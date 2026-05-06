@@ -1,21 +1,13 @@
-2025/09/17-16:06:38.836 5f01 Recovering log #127
-2025/09/17-16:06:38.847 5f01 Level-0 table #131: started
-2025/09/17-16:06:38.851 5f01 Level-0 table #131: 81411 bytes OK
-2025/09/17-16:06:38.857 5f01 Delete type=0 #127
-2025/09/17-16:06:38.857 5f01 Delete type=3 #123
-2025/09/17-16:06:39.871 5f30 Moved #131 to level-1 81411 bytes OK: files[ 0 1 1 0 0 0 0 ]
-2025/09/17-16:06:40.525 5f04 Level-0 table #134: started
-2025/09/17-16:06:40.527 5f04 Level-0 table #134: 12461 bytes OK
-2025/09/17-16:06:40.528 5f04 Delete type=0 #132
-2025/09/17-16:06:40.529 5f04 Manual compaction at level-0 from '\x003\x00\x00\x00' @ 72057594037927935 : 1 .. '\x004\x00\x00\x00' @ 0 : 0; will stop at '\x003\x00\x00\x05' @ 97468 : 1
-2025/09/17-16:06:40.529 5f04 Compacting 1@0 + 1@1 files
-2025/09/17-16:06:40.537 5f04 Generated table #135@0: 2576 keys, 53359 bytes
-2025/09/17-16:06:40.537 5f04 Compacted 1@0 + 1@1 files => 53359 bytes
-2025/09/17-16:06:40.539 5f04 compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/09/17-16:06:40.539 5f04 Delete type=2 #134
-2025/09/17-16:06:40.539 5f04 Manual compaction at level-0 from '\x003\x00\x00\x05' @ 97468 : 1 .. '\x004\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/09/17-16:06:45.120 5f32 Compacting 1@1 + 1@2 files
-2025/09/17-16:06:45.150 5f32 Generated table #136@1: 16464 keys, 598625 bytes
-2025/09/17-16:06:45.150 5f32 Compacted 1@1 + 1@2 files => 598625 bytes
-2025/09/17-16:06:45.153 5f32 compacted to: files[ 0 0 1 0 0 0 0 ]
-2025/09/17-16:06:45.153 5f32 Delete type=2 #131
+2026/05/06-17:27:44.422 38f5 Reusing MANIFEST /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-007517
+2026/05/06-17:27:44.423 38f5 Recovering log #7577
+2026/05/06-17:27:44.459 38f5 Reusing old log /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/007577.log 
+2026/05/06-17:29:08.821 38f5 Level-0 table #7606: started
+2026/05/06-17:29:08.863 38f5 Level-0 table #7606: 1690565 bytes OK
+2026/05/06-17:29:08.870 38f5 Delete type=0 #7577
+2026/05/06-17:30:24.848 38f5 Compacting 1@0 + 0@1 files
+2026/05/06-17:30:24.884 38f5 Generated table #7607@0: 13498 keys, 283556 bytes
+2026/05/06-17:30:24.891 38f5 Generated table #7608@0: 1795 keys, 75998 bytes
+2026/05/06-17:30:24.895 38f5 Generated table #7609@0: 88 keys, 14430 bytes
+2026/05/06-17:30:24.895 38f5 Compacted 1@0 + 0@1 files => 373984 bytes
+2026/05/06-17:30:24.897 38f5 compacted to: files[ 0 3 29 0 0 0 0 ]
+2026/05/06-17:30:24.898 38f5 Delete type=2 #7606

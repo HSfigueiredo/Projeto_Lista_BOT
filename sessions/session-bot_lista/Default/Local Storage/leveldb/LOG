@@ -1,5 +1,6 @@
-2025/09/17-16:06:38.370 5f04 Recovering log #15
-2025/09/17-16:06:38.370 5f04 Level-0 table #18: started
-2025/09/17-16:06:38.374 5f04 Level-0 table #18: 2949 bytes OK
-2025/09/17-16:06:38.381 5f04 Delete type=3 #13
-2025/09/17-16:06:38.381 5f04 Delete type=0 #15
+2026/05/06-17:27:43.828 3916 Reusing MANIFEST /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/Local Storage/leveldb/MANIFEST-000001
+2026/05/06-17:27:43.836 3916 Recovering log #7
+2026/05/06-17:27:43.837 3916 Reusing old log /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/Local Storage/leveldb/000007.log 
+2026/05/06-17:29:44.369 3918 Level-0 table #11: started
+2026/05/06-17:29:44.376 3918 Level-0 table #11: 15805 bytes OK
+2026/05/06-17:29:44.380 3918 Delete type=0 #7

@@ -1,2 +1,3 @@
-2025/09/17-00:35:21.577 4beb Creating DB /home/ubuntu/Projeto_Lista_BOT/sessions/session-bot_lista/Default/shared_proto_db since it was missing.
-2025/09/17-00:35:21.579 4beb Delete type=3 #1
+2026/05/06-17:27:43.922 38f5 Reusing MANIFEST /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/shared_proto_db/MANIFEST-000001
+2026/05/06-17:27:43.922 38f5 Recovering log #3
+2026/05/06-17:27:43.922 38f5 Reusing old log /home/hyan/projetos/projetoBot/Projeto_Lista_BOT/sessions/session-bot_lista/Default/shared_proto_db/000003.log 
