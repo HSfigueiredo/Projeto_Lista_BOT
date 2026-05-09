@@ -57,7 +57,8 @@ async function executar(msg, client, estado) {
                     msg.reply(`✅ ${pub} clipes publicados no TikTok!\n🎯 ${total} clipes gerados no total (top ${pub} com maior viral score publicados, 15min de intervalo entre cada).`);
                     concluido = true;
                 } else if (status === 'failed') {
-                    msg.reply(`❌ Falha ao processar video: ${resultado ? JSON.stringify(resultado) : 'erro desconhecido'}`);
+                    const motivo = statusRes.data.erro || (resultado ? JSON.stringify(resultado) : 'erro desconhecido');
+                    msg.reply(`❌ Falha ao processar video: ${motivo}`);
                     concluido = true;
                 }
             } catch (pollErro) {
