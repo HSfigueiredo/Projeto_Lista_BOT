@@ -130,6 +130,7 @@ async function executar(msg, client, estado) {
     const body = {
       url: videoUrl,
       videoType,
+      ext: videoType === 1 ? 'mp4' : undefined,
       tiktokAccountId: TIKTOK_ACCOUNT_ID,
       maxClips: 5,
       intervaloMinutos: 15
