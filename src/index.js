@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
@@ -52,7 +53,7 @@ client.on('message', async msg => {
 
     if (msg.body === 'Lista' || msg.body === 'lista') {
         try {
-            const resposta = await axios.get('http://201.23.69.230:3000/');
+            const resposta = await axios.get(`${process.env.API_URL || 'http://201.23.69.230:3000'}/`);
             await msg.reply(resposta.data);
         } catch (error) {
             console.error(error.message);
