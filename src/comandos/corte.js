@@ -1,7 +1,80 @@
 const axios = require('axios');
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
 const CORTES_URL = process.env.PROJETO_CORTES_URL || 'http://localhost:3001';
 const TIKTOK_ACCOUNT_ID = process.env.TIKTOK_ACCOUNT_ID;
+const TMP_DIR = path.join(__dirname, '..', '..', 'tmp');
+const LIMITE_SEGUNDOS = 3300;
+
+function executarComando(comando, args, timeout = 600000) {
+    return new Promise((resolve, reject) => {
+        const proc = spawn(comando, args, { stdio: 'pipe', timeout });
+        let stderr = '';
+        proc.stderr.on('data', (d) => { stderr += d.toString(); });
+        proc.on('close', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(stderr.slice(0, 300)));
+        });
+        proc.on('error', reject);
+    });
+}
+
+function obterDuracao(url) {
+    return new Promise((resolve) => {
+        const proc = spawn('yt-dlp', ['--get-duration', '-s', '--print', '%(duration)s', url], { stdio: 'pipe', timeout: 30000 });
+        let out = '';
+        proc.stdout.on('data', (d) => { out += d.toString(); });
+        proc.on('close', (c) => { resolve(c === 0 ? Number(out.trim()) : null); });
+        proc.on('error', () => resolve(null));
+    });
+}
+
+async function baixarETrimmar(url) {
+    fs.mkdirSync(TMP_DIR, { recursive: true });
+    const ts = Date.now();
+    const rawPath = path.join(TMP_DIR, `corte_${ts}.mp4`);
+    const finalPath = path.join(TMP_DIR, `corte_${ts}_trimmed.mp4`);
+
+    const duracao = await obterDuracao(url);
+
+    if (duracao && duracao > LIMITE_SEGUNDOS) {
+        const minutos = Math.floor(LIMITE_SEGUNDOS / 60);
+        console.log(`Video tem ${Math.round(duracao / 60)}min, baixando primeiros ${minutos}min`);
+
+        await executarComando('yt-dlp', [
+            '--download-sections', `*${minutos}-${minutos + 1}`,
+            '--force-keyframes-at-cuts',
+            '-o', rawPath, url
+        ]);
+
+        await executarComando('ffmpeg', [
+            '-i', rawPath, '-t', String(LIMITE_SEGUNDOS),
+            '-c', 'copy', '-y', finalPath
+        ], 120000);
+
+        try { fs.unlinkSync(rawPath); } catch (_) {}
+        return { path: finalPath, trimmado: true, duracaoOriginal: duracao };
+    }
+
+    console.log(`Video tem ${duracao ? Math.round(duracao / 60) + 'min' : 'duracao desconhecida'}, baixando completo`);
+    await executarComando('yt-dlp', ['-o', rawPath, url]);
+    return { path: rawPath, trimmado: false };
+}
+
+async function uploadParaTransfer(pathArquivo) {
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('file', fs.createReadStream(pathArquivo));
+    const resp = await axios.post('https://transfer.sh', form, {
+        headers: { ...form.getHeaders(), 'User-Agent': 'curl' },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 600000
+    });
+    return resp.data.trim();
+}
 
 async function executar(msg, client, estado) {
     const partes = msg.body.trim().split(/\s+/);
@@ -18,19 +91,41 @@ async function executar(msg, client, estado) {
         return;
     }
 
-    msg.reply(`⏳ Enviando video para processamento...`);
+    msg.reply(`⏳ Verificando video...`);
 
     try {
+        const duracao = await obterDuracao(url);
+
+        let videoUrl = url;
+        let videoType = 2;
+        let arquivoTemp = null;
+
+        if (duracao && duracao > LIMITE_SEGUNDOS) {
+            msg.reply(`⏳ Video tem ${Math.round(duracao / 60)}min. Baixando e trimando para 55min...`);
+            const info = await baixarETrimmar(url);
+            arquivoTemp = info.path;
+
+            msg.reply(`⏳ Enviando para transfer.sh...`);
+            videoUrl = await uploadParaTransfer(info.path);
+            videoType = 1;
+
+            try { fs.unlinkSync(info.path); } catch (_) {}
+            msg.reply(`⏳ Video hospedado em transfer.sh, enviando para Vizard...`);
+        } else if (duracao) {
+            msg.reply(`⏳ Video tem ${Math.round(duracao / 60)}min, dentro do limite. Enviando direto...`);
+        } else {
+            msg.reply(`⏳ Nao foi possivel verificar duracao, enviando mesmo assim...`);
+        }
+
         const body = {
-            url,
+            url: videoUrl,
+            videoType,
             tiktokAccountId: TIKTOK_ACCOUNT_ID,
             maxClips: 5,
             intervaloMinutos: 15
         };
 
-        if (caption) {
-            body.caption = caption;
-        }
+        if (caption) body.caption = caption;
 
         const response = await axios.post(`${CORTES_URL}/clips`, body, {
             headers: { Authorization: 'Bearer token_teste' }
@@ -40,7 +135,6 @@ async function executar(msg, client, estado) {
         msg.reply(`⏳ Cortando video... Job #${jobId}. Acompanhando progresso...`);
 
         let concluido = false;
-
         while (!concluido) {
             await new Promise((r) => setTimeout(r, 30000));
 
