@@ -35,7 +35,7 @@ client.on('qr', async (qr) => {
     qrcode.generate(qr, { small: true });
 
     try {
-        await axios.post('http://201.23.69.230:3000/qr', { qr });
+        await axios.post(`${process.env.API_URL || 'http://201.23.69.230:3000'}/qr`, { qr });
     } catch (error) {
         console.error('API indisponivel para enviar QR.');
     }
