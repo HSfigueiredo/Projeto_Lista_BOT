@@ -14,3 +14,6 @@ chrome/
 
 # Logs
 *.log
+
+# Arquivos temporarios de corte
+tmp/
