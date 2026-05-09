@@ -40,24 +40,17 @@ async function baixarETrimmar(url) {
     const duracao = await obterDuracao(url);
 
     if (duracao && duracao > LIMITE_SEGUNDOS) {
-        const minutos = Math.floor(LIMITE_SEGUNDOS / 60);
-        console.log(`Video tem ${Math.round(duracao / 60)}min, baixando primeiros ${minutos}min`);
+        console.log(`Video tem ${Math.round(duracao / 60)}min, baixando primeiros ${Math.floor(LIMITE_SEGUNDOS / 60)}min`);
 
-        const secoes = `${minutos}-${minutos + 1}`;
         await executarComando('yt-dlp', [
-            '--download-sections', `*${secoes}`,
+            '--download-sections', `*0-${LIMITE_SEGUNDOS}`,
             '--force-keyframes-at-cuts',
             '--no-check-certificate',
+            '-S', 'res:480',
             '-o', rawPath, url
         ]);
 
-        await executarComando('ffmpeg', [
-            '-i', rawPath, '-t', String(LIMITE_SEGUNDOS),
-            '-c', 'copy', '-y', finalPath
-        ], 120000);
-
-        try { fs.unlinkSync(rawPath); } catch (_) {}
-        return { path: finalPath, trimmado: true, duracaoOriginal: duracao };
+        return { path: rawPath, trimmado: true, duracaoOriginal: duracao };
     }
 
     console.log(`Video tem ${duracao ? Math.round(duracao / 60) + 'min' : 'duracao desconhecida'}, baixando completo`);
