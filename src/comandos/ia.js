@@ -11,6 +11,8 @@ async function executar(msg, client, estado) {
         return;
     }
 
+    msg.reply('🤔 Pensando...');
+
     try {
         const response = await axios.post(`${API_URL}/ia`, {
             mensagem: texto,
@@ -18,10 +20,7 @@ async function executar(msg, client, estado) {
         });
 
         const { resposta } = response.data;
-
-        let respostaFormatada = `${resposta}`;
-
-        await msg.reply(respostaFormatada);
+        await msg.reply(resposta);
 
     } catch (error) {
         console.error('Erro ao consultar IA:', error.response?.data || error.message);
