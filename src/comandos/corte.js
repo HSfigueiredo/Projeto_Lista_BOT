@@ -23,10 +23,10 @@ function executarComando(comando, args, timeout = 600000) {
 
 function obterDuracao(url) {
     return new Promise((resolve) => {
-        const proc = spawn('yt-dlp', ['--get-duration', '-s', '--print', '%(duration)s', url], { stdio: 'pipe', timeout: 30000 });
+        const proc = spawn('yt-dlp', ['--no-check-certificate', '--print', '%(duration)s', url], { stdio: 'pipe', timeout: 60000 });
         let out = '';
         proc.stdout.on('data', (d) => { out += d.toString(); });
-        proc.on('close', (c) => { resolve(c === 0 ? Number(out.trim()) : null); });
+        proc.on('close', (c) => { resolve(c === 0 ? Number(out.trim().split('\n')[0]) : null); });
         proc.on('error', () => resolve(null));
     });
 }
@@ -43,9 +43,11 @@ async function baixarETrimmar(url) {
         const minutos = Math.floor(LIMITE_SEGUNDOS / 60);
         console.log(`Video tem ${Math.round(duracao / 60)}min, baixando primeiros ${minutos}min`);
 
+        const secoes = `${minutos}-${minutos + 1}`;
         await executarComando('yt-dlp', [
-            '--download-sections', `*${minutos}-${minutos + 1}`,
+            '--download-sections', `*${secoes}`,
             '--force-keyframes-at-cuts',
+            '--no-check-certificate',
             '-o', rawPath, url
         ]);
 
@@ -59,7 +61,7 @@ async function baixarETrimmar(url) {
     }
 
     console.log(`Video tem ${duracao ? Math.round(duracao / 60) + 'min' : 'duracao desconhecida'}, baixando completo`);
-    await executarComando('yt-dlp', ['-o', rawPath, url]);
+    await executarComando('yt-dlp', ['--no-check-certificate', '-o', rawPath, url]);
     return { path: rawPath, trimmado: false };
 }
 
