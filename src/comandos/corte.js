@@ -40,13 +40,13 @@ async function baixarETrimmar(url) {
 
   if (duracao && duracao > LIMITE_SEGUNDOS) {
     const outputPath = path.join(TMP_DIR, `corte_${ts}.mp4`);
-    console.log(`Baixando primeiros ${Math.floor(LIMITE_SEGUNDOS / 60)}min com ffmpeg (360p)`);
+    console.log(`Baixando primeiros ${Math.floor(LIMITE_SEGUNDOS / 60)}min com ffmpeg (480p)`);
     await executarComando('yt-dlp', [
       '--no-check-certificate',
       '--download-sections', `*0-${LIMITE_SEGUNDOS}`,
       '--downloader', 'ffmpeg',
       '--force-keyframes-at-cuts',
-      '-f', 'best[height<=360]',
+      '-f', 'best[height<=480]',
       '-o', outputPath, url
     ], 1800000);
     return { path: outputPath, trimmado: true, duracaoOriginal: duracao };
@@ -54,7 +54,7 @@ async function baixarETrimmar(url) {
 
   const outputPath = path.join(TMP_DIR, `corte_${ts}.mp4`);
   console.log(`Video curto (${duracao ? Math.round(duracao / 60) + 'min' : '?'}), baixando completo`);
-  await executarComando('yt-dlp', ['--no-check-certificate', '-f', 'best[height<=360]', '-o', outputPath, url], 1800000);
+  await executarComando('yt-dlp', ['--no-check-certificate', '-f', 'best[height<=480]', '-o', outputPath, url], 1800000);
   return { path: outputPath, trimmado: false };
 }
 
