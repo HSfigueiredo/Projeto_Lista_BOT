@@ -58,17 +58,32 @@ async function baixarETrimmar(url) {
   return { path: outputPath, trimmado: false };
 }
 
-async function uploadParaTransfer(pathArquivo) {
+async function uploadArquivo(pathArquivo) {
   const FormData = require('form-data');
-  const form = new FormData();
-  form.append('file', fs.createReadStream(pathArquivo));
-  const resp = await axios.post('https://transfer.sh', form, {
-    headers: { ...form.getHeaders(), 'User-Agent': 'curl' },
-    maxContentLength: Infinity,
-    maxBodyLength: Infinity,
-    timeout: 600000
-  });
-  return resp.data.trim();
+  const nome = path.basename(pathArquivo);
+  const servicos = [
+    { url: 'https://temp.sh/upload', campo: 'file' },
+    { url: 'https://transfer.sh', campo: 'file' },
+  ];
+
+  for (const svc of servicos) {
+    try {
+      const form = new FormData();
+      form.append(svc.campo, fs.createReadStream(pathArquivo), nome);
+      const resp = await axios.post(svc.url, form, {
+        headers: { ...form.getHeaders() },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 600000
+      });
+      const url = resp.data.trim();
+      if (url && url.startsWith('http')) return url;
+    } catch (e) {
+      console.log(`Upload para ${svc.url} falhou: ${e.message}`);
+    }
+  }
+
+  throw new Error('Todos os servicos de upload falharam. Verifique sua conexao.');
 }
 
 async function executar(msg, client, estado) {
@@ -100,8 +115,8 @@ async function executar(msg, client, estado) {
       const info = await baixarETrimmar(url);
       arquivoTemp = info.path;
 
-      msg.reply('⏳ Enviando para transfer.sh...');
-      videoUrl = await uploadParaTransfer(info.path);
+      msg.reply('⏳ Enviando para servidor de arquivos...');
+      videoUrl = await uploadArquivo(info.path);
 
       try { fs.unlinkSync(info.path); } catch (_) {}
       videoType = 1;
@@ -156,7 +171,7 @@ async function executar(msg, client, estado) {
       }
     }
   } catch (error) {
-    const detalhe = error.response?.data?.mensagem || error.message;
+    const detalhe = error.response?.data?.mensagem || error.response?.data || error.message || 'erro desconhecido (verifique os logs)';
     msg.reply(`❌ Erro ao criar job de corte: ${detalhe}`);
   }
 }
