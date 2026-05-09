@@ -62,21 +62,32 @@ async function uploadArquivo(pathArquivo) {
   const FormData = require('form-data');
   const nome = path.basename(pathArquivo);
   const servicos = [
-    { url: 'https://temp.sh/upload', campo: 'file' },
-    { url: 'https://transfer.sh', campo: 'file' },
+    {
+      url: 'https://litterbox.catbox.moe/resources/internals/api.php',
+      form: { reqtype: 'fileupload', time: '72h' },
+      campo: 'fileToUpload',
+      extrair: (d) => d.trim()
+    },
+    {
+      url: 'https://catbox.moe/user/api.php',
+      form: { reqtype: 'fileupload' },
+      campo: 'fileToUpload',
+      extrair: (d) => d.trim()
+    },
   ];
 
   for (const svc of servicos) {
     try {
       const form = new FormData();
+      for (const [k, v] of Object.entries(svc.form)) form.append(k, v);
       form.append(svc.campo, fs.createReadStream(pathArquivo), nome);
       const resp = await axios.post(svc.url, form, {
-        headers: { ...form.getHeaders() },
+        headers: form.getHeaders(),
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         timeout: 600000
       });
-      const url = resp.data.trim();
+      const url = svc.extrair(resp.data);
       if (url && url.startsWith('http')) return url;
     } catch (e) {
       console.log(`Upload para ${svc.url} falhou: ${e.message}`);
