@@ -106,8 +106,9 @@ async function analisarComIA(transcricao) {
   const prompt = `Voce e um editor de video. Analise a transcricao abaixo e recomende cortes.
 
 REGRAS:
-- Priorize SHORTS (15-60s, formato 9:16)
-- LONGOS (5-30min, 16:9) apenas se o conteudo justificar
+- O FORMATO (short/long) sera definido automaticamente pela duracao
+- Shorts: ate 59s (9:16 - TikTok/Reels/Shorts)
+- Longs: 60s ou mais (16:9 - YouTube)
 - Cada corte deve ser AUTOCONTIDO
 - Use timestamps EXATOS (segundos)
 - Avalie cada corte: conteudo(0-10), engajamento(0-10), viralidade(0-10), autocontido(0-10)
@@ -116,7 +117,7 @@ REGRAS:
 - Min 2, max 10 cortes
 - Responda APENAS JSON
 
-[{"titulo":"...","tipo":"short","start":0,"end":0,"razao":"...","conteudo":0,"engajamento":0,"viralidade":0,"autocontido":0,"viralScore":0}]${exemplosText}
+[{"titulo":"...","start":0,"end":0,"razao":"...","conteudo":0,"engajamento":0,"viralidade":0,"autocontido":0,"viralScore":0}]${exemplosText}
 
 Transcricao:\n${JSON.stringify(transcricao)}`;
 
@@ -167,7 +168,8 @@ async function gerarClipes(videoPath, cortes, nomeBase) {
   const resultados = [];
   for (let i = 0; i < cortes.length; i++) {
     const c = cortes[i];
-    const tipo = c.tipo || 'short';
+    const duracao = c.end - c.start
+    const tipo = duracao <= 59 ? 'short' : 'long'
     const dir = tipo === 'longs' ? longsDir : shortsDir;
     const nome = `${i + 1}_${(c.titulo || 'corte').replace(/[^a-z0-9]/gi, '_').slice(0, 40)}.mp4`;
     const saida = path.join(dir, nome);
@@ -227,7 +229,7 @@ async function executar(msg, client, estado) {
 
         return {
           titulo: `Corte ${i + 1}`,
-          tipo: (a.end - a.start) > 300 ? 'long' : 'short',
+          tipo: (a.end - a.start) <= 59 ? 'short' : 'long',
           start: a.start,
           end: a.end,
           razao: ajustes.length ? `Timestamps originais ajustados (${ajustes.join(', ')})` : 'Timestamps exatos'
@@ -243,8 +245,9 @@ async function executar(msg, client, estado) {
       cortes = await analisarComIA(transcricao);
       cortes.sort((a, b) => b.viralScore - a.viralScore);
 
+      const tipoExibido = (c) => (c.end - c.start) <= 59 ? '📱 short' : '🎥 long'
       const resumo = cortes.map((c, i) =>
-        `🎬 #${i + 1} ${c.titulo} | ${c.tipo} | ${Math.round((c.end - c.start) * 10) / 10}s | viral: ${c.viralScore}/10`
+        `🎬 #${i + 1} ${c.titulo} | ${tipoExibido(c)} | ${Math.round((c.end - c.start) * 10) / 10}s | viral: ${c.viralScore}/10`
       ).join('\n');
       msg.reply(`🤖 DeepSeek recomenda ${cortes.length} cortes:\n${resumo}`);
     }
