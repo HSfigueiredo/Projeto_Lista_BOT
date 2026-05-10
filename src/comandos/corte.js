@@ -23,40 +23,6 @@ function salvarExemplo(corte, videoUrl) {
   fs.writeFileSync(EXEMPLOS_PATH, JSON.stringify(exemplos.slice(0, 20), null, 2));
 }
 
-function montarPromptComExemplos(transcricao) {
-  const exemplos = carregarExemplos();
-  const exemplosText = exemplos.length
-    ? `\n\nEXEMPLOS DE CORTES BEM-SUCEDIDOS (usar como referencia de qualidade):\n${JSON.stringify(exemplos.slice(0, 5), null, 2)}`
-    : '';
-
-  return `Voce e um editor de video especializado em criar cortes virais.
-
-Analise a transcricao abaixo com timestamps word-level e recomende os MELHORES trechos para transformar em clips.
-
-REGRAS:
-- Priorize cortes SHORTS (15-60s, formato 9:16 para TikTok/Reels/Shorts)
-- Crie LONGOS (5-30min, formato 16:9 para YouTube) APENAS se o conteudo tiver muito valor narrativo
-- Cada corte deve ser AUTOCONTIDO (fazer sentido sozinho, sem contexto previo)
-- Use timestamps EXATOS em segundos (nao corte no meio de uma palavra)
-- Evite cortes que comecam com "entao", "mas", "porque" (falta contexto)
-- Prefira cortes que comecam com uma pergunta, uma afirmacao forte ou um gancho
-
-AVALIE cada corte com notas de 0-10:
-- conteudo: o assunto e relevante/interessante?
-- engajamento: prende atencao? tem gancho nos primeiros 3s?
-- viralidade: pode viralizar? e compartilhave?
-- autocontido: faz sentido sozinho sem o resto do video?
-
-Calcule viralScore = media das 4 notas.
-
-Ordene do MAIOR viralScore para o MENOR.
-Minimo 2 cortes, maximo 10.
-Responda APENAS JSON, sem texto extra.
-
-Formato:
-[{"titulo":"titulo chamativo","tipo":"short","start":0,"end":0,"razao":"por que este trecho funciona","conteudo":0,"engajamento":0,"viralidade":0,"autocontido":0,"viralScore":0}]${exemplosText}\n\nTranscricao:\n${JSON.stringify(transcricao)}`;
-}
-
 function executar(comando, args, timeout = 600000) {
   return new Promise((resolve, reject) => {
     const proc = spawn(comando, args, { stdio: 'pipe' });
@@ -76,6 +42,72 @@ function obterDuracao(url) {
     proc.on('close', (c) => resolve(c === 0 ? Number(out.trim().split('\n')[0]) : null));
     proc.on('error', () => resolve(null));
   });
+}
+
+function parsearTimestamps(args) {
+  const timestamps = [];
+  for (const arg of args) {
+    const match = arg.match(/^(\d+(?:\.\d+)?)[-–](\d+(?:\.\d+)?)$/);
+    if (match) timestamps.push({ start: parseFloat(match[1]), end: parseFloat(match[2]) });
+  }
+  return timestamps;
+}
+
+function ajustarParaPalavras(transcricao, timestamps) {
+  const palavras = transcricao.segments.flatMap(s => s.words || []);
+  if (!palavras.length) return timestamps;
+
+  const ajustados = [];
+  for (const ts of timestamps) {
+    let startWord = null, endWord = null;
+
+    for (const w of palavras) {
+      if (!startWord && w.end >= ts.start) startWord = w;
+      if (!endWord && w.start <= ts.end) endWord = w;
+    }
+
+    if (!startWord) startWord = palavras[0];
+    if (!endWord) endWord = palavras[palavras.length - 1];
+
+    ajustados.push({
+      start: startWord.start,
+      end: endWord.end,
+      startOriginal: ts.start,
+      endOriginal: ts.end
+    });
+  }
+  return ajustados;
+}
+
+async function analisarComIA(transcricao) {
+  const exemplos = carregarExemplos();
+  const exemplosText = exemplos.length
+    ? `\n\nEXEMPLOS DE REFERENCIA:\n${JSON.stringify(exemplos.slice(0, 5), null, 2)}`
+    : '';
+
+  const prompt = `Voce e um editor de video. Analise a transcricao abaixo e recomende cortes.
+
+REGRAS:
+- Priorize SHORTS (15-60s, formato 9:16)
+- LONGOS (5-30min, 16:9) apenas se o conteudo justificar
+- Cada corte deve ser AUTOCONTIDO
+- Use timestamps EXATOS (segundos)
+- Avalie cada corte: conteudo(0-10), engajamento(0-10), viralidade(0-10), autocontido(0-10)
+- viralScore = media das 4 notas
+- Ordene do maior viralScore para o menor
+- Min 2, max 10 cortes
+- Responda APENAS JSON
+
+[{"titulo":"...","tipo":"short","start":0,"end":0,"razao":"...","conteudo":0,"engajamento":0,"viralidade":0,"autocontido":0,"viralScore":0}]${exemplosText}
+
+Transcricao:\n${JSON.stringify(transcricao)}`;
+
+  const resp = await axios.post(`${API_URL}/ia`, {
+    mensagem: prompt, persona: 'preciso', temperatura: 0.3, maxTokens: 4096
+  });
+  const match = resp.data.resposta.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error('Resposta da IA invalida');
+  return JSON.parse(match[0]);
 }
 
 async function baixarVideo(url) {
@@ -107,30 +139,19 @@ async function transcrever(audioPath) {
   });
 }
 
-async function analisar(transcricao) {
-  const prompt = montarPromptComExemplos(transcricao);
-  const resp = await axios.post(`${API_URL}/ia`, {
-    mensagem: prompt, persona: 'preciso', temperatura: 0.3, maxTokens: 4096
-  });
-  const match = resp.data.resposta.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error('Resposta da IA nao contem JSON');
-  return JSON.parse(match[0]);
-}
-
-async function gerarClipes(videoPath, cortes, nomeVideo) {
-  const pastaBase = path.join(CORTES_DIR, nomeVideo);
+async function gerarClipes(videoPath, cortes, nomeBase) {
+  const pastaBase = path.join(CORTES_DIR, nomeBase);
   const shortsDir = path.join(pastaBase, 'shorts');
   const longsDir = path.join(pastaBase, 'longs');
   fs.mkdirSync(shortsDir, { recursive: true });
   fs.mkdirSync(longsDir, { recursive: true });
 
   const resultados = [];
-
   for (let i = 0; i < cortes.length; i++) {
     const c = cortes[i];
-    const tipo = c.tipo === 'long' ? 'longs' : 'shorts';
+    const tipo = c.tipo || 'short';
     const dir = tipo === 'longs' ? longsDir : shortsDir;
-    const nome = `${i + 1}_${c.titulo.replace(/[^a-z0-9]/gi, '_').slice(0, 40)}.mp4`;
+    const nome = `${i + 1}_${(c.titulo || 'corte').replace(/[^a-z0-9]/gi, '_').slice(0, 40)}.mp4`;
     const saida = path.join(dir, nome);
 
     await executar('ffmpeg', [
@@ -142,86 +163,100 @@ async function gerarClipes(videoPath, cortes, nomeVideo) {
       '-c:a', 'aac', '-b:a', '128k', '-y', saida
     ], 600000);
 
-    resultados.push({
-      titulo: c.titulo, tipo, caminho: saida,
-      viralScore: c.viralScore,
-      duracao: Math.round((c.end - c.start) * 10) / 10,
-      start: c.start, end: c.end, razao: c.razao
-    });
+    resultados.push({ titulo: c.titulo || `Corte ${i + 1}`, tipo, caminho: saida, start: c.start, end: c.end });
   }
-
   return resultados;
 }
 
 async function executar(msg, client, estado) {
   const partes = msg.body.trim().split(/\s+/);
   const url = partes[1];
-  const comandoCompleto = msg.body.trim();
-  const isFeedback = comandoCompleto.startsWith('/corte-feedback');
+  const args = partes.slice(2);
+  const timestampsUsuario = parsearTimestamps(args);
 
-  if (isFeedback) {
-    const args = partes.slice(1);
-    const acao = args[0]; // 'bom' ou 'ruim'
-    const idx = parseInt(args[1]) - 1;
-    // Feedback é processado via mensagem separada (ver no handler de mensagem)
-    return;
-  }
-
-  if (!url) { msg.reply('Formato: /corte URL_DO_YOUTUBE'); return; }
+  if (!url) { msg.reply('Formato: /corte URL [inicio-fim inicio-fim ...]\nEx: /corte https://youtube.com/watch?v=ABC 12.5-45.2 60-120'); return; }
 
   msg.reply('⏳ Verificando video...');
   try {
     const info = await baixarVideo(url);
-    const duracaoStr = info.duracao
-      ? `${Math.round(info.duracao / 60)}min`
-      : 'duracao desconhecida';
+    const duracaoStr = info.duracao ? `${Math.round(info.duracao / 60)}min` : '?';
 
-    msg.reply(info.duracao && info.duracao > LIMITE_SEGUNDOS
-      ? `⏳ Video tem ${duracaoStr}. Baixando primeiros 55min...`
-      : `⏳ Video (${duracaoStr}) baixado. Extraindo audio...`);
+    if (info.duracao && info.duracao > LIMITE_SEGUNDOS) {
+      msg.reply(`⏳ Video tem ${duracaoStr}. Baixando primeiros 55min...`);
+    } else {
+      msg.reply(`⏳ Video (${duracaoStr}) baixado. Extraindo audio...`);
+    }
 
     const audioPath = info.path.replace(/\.mp4$/, '.wav');
     await executar('ffmpeg', ['-i', info.path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', '-y', audioPath], 300000);
 
-    msg.reply('⏳ Transcrevendo com IA (Whisper)...');
+    msg.reply('⏳ Transcrevendo com Whisper...');
     const transcricao = await transcrever(audioPath);
     try { fs.unlinkSync(audioPath); } catch (_) {}
 
-    msg.reply('⏳ Analisando melhores momentos com DeepSeek...');
-    const cortes = await analisar(transcricao);
-    const topCortes = cortes.sort((a, b) => b.viralScore - a.viralScore);
+    let cortes;
 
-    const resumo = topCortes.map((c, i) =>
-      `🎬 #${i + 1} ${c.titulo}\n   ${c.tipo} | ${Math.round((c.end - c.start) * 10) / 10}s | viral: ${c.viralScore}/10`
-    ).join('\n');
-    msg.reply(`🤖 DeepSeek recomenda ${topCortes.length} cortes:\n${resumo}`);
+    if (timestampsUsuario.length > 0) {
+      msg.reply(`⏳ Ajustando ${timestampsUsuario.length} cortes aos limites das palavras...`);
+      const ajustados = ajustarParaPalavras(transcricao, timestampsUsuario);
 
-    msg.reply('⏳ Gerando clipes com ffmpeg...');
+      cortes = ajustados.map((a, i) => {
+        const deltaStart = Math.abs(a.start - a.startOriginal);
+        const deltaEnd = Math.abs(a.end - a.endOriginal);
+        const ajustes = [];
+        if (deltaStart > 0.1) ajustes.push(`inicio ajustado em ${deltaStart.toFixed(1)}s`);
+        if (deltaEnd > 0.1) ajustes.push(`fim ajustado em ${deltaEnd.toFixed(1)}s`);
+
+        return {
+          titulo: `Corte ${i + 1}`,
+          tipo: (a.end - a.start) > 300 ? 'long' : 'short',
+          start: a.start,
+          end: a.end,
+          razao: ajustes.length ? `Timestamps originais ajustados (${ajustes.join(', ')})` : 'Timestamps exatos'
+        };
+      });
+
+      const detalhes = ajustados.map((a, i) =>
+        `🎬 #${i + 1}: ${a.startOriginal}s-${a.endOriginal}s → ${a.start.toFixed(1)}s-${a.end.toFixed(1)}s (${Math.round((a.end - a.start) * 10) / 10}s)`
+      ).join('\n');
+      msg.reply(`✅ Ajustes concluidos:\n${detalhes}`);
+    } else {
+      msg.reply('⏳ Analisando melhores momentos com DeepSeek...');
+      cortes = await analisarComIA(transcricao);
+      cortes.sort((a, b) => b.viralScore - a.viralScore);
+
+      const resumo = cortes.map((c, i) =>
+        `🎬 #${i + 1} ${c.titulo} | ${c.tipo} | ${Math.round((c.end - c.start) * 10) / 10}s | viral: ${c.viralScore}/10`
+      ).join('\n');
+      msg.reply(`🤖 DeepSeek recomenda ${cortes.length} cortes:\n${resumo}`);
+    }
+
+    msg.reply('⏳ Gerando clipes...');
     const nomeBase = `video_${new Date().toISOString().slice(0, 10)}`;
-    const clipes = await gerarClipes(info.path, topCortes, nomeBase);
+    const clipes = await gerarClipes(info.path, cortes, nomeBase);
 
     const shorts = clipes.filter(c => c.tipo === 'short');
     const longs = clipes.filter(c => c.tipo === 'long');
 
-    let msgFinal = `✅ ${clipes.length} clipes gerados!\n📁 ${path.join(CORTES_DIR, nomeBase)}\n\n`;
-    if (shorts.length) msgFinal += `📱 Shorts (9:16): ${shorts.length}\n`;
-    if (longs.length) msgFinal += `🎥 Longos (16:9): ${longs.length}\n`;
-    msgFinal += `\n🏆 Melhor: "${topCortes[0].titulo}" (viralScore: ${topCortes[0].viralScore}/10)`;
-    msgFinal += `\n\n📌 Para ajudar a IA a melhorar, responda:\n"gostei do corte 1" ou "nao gostei do corte 3"`;
+    let msgFinal = `✅ ${clipes.length} clipes gerados!\n📁 ${path.join(CORTES_DIR, nomeBase)}\n`;
+    if (shorts.length) msgFinal += `\n📱 Shorts (9:16): ${shorts.length}`;
+    if (longs.length) msgFinal += `\n🎥 Longos (16:9): ${longs.length}`;
+
+    if (!timestampsUsuario.length) {
+      msgFinal += `\n\n🏆 Melhor: "${cortes[0].titulo}" (${cortes[0].viralScore}/10)`;
+      cortes.forEach(c => salvarExemplo({ titulo: c.titulo, tipo: c.tipo, start: c.start, end: c.end, viralScore: c.viralScore, razao: c.razao }, url));
+    }
+
     msg.reply(msgFinal);
 
-    // Salva os cortes como exemplos
-    topCortes.forEach(c => salvarExemplo(c, url));
-
-    // Copia tambem para os diretorios fixos
-    const shortsFixos = path.join(CORTES_DIR, 'shorts');
-    const longsFixos = path.join(CORTES_DIR, 'longs');
+    // Copia para pastas fixas
     for (const clip of clipes) {
-      const dir = clip.tipo === 'longs' ? longsFixos : shortsFixos;
+      const dir = clip.tipo === 'longs'
+        ? path.join(CORTES_DIR, 'longs')
+        : path.join(CORTES_DIR, 'shorts');
       try { fs.copyFileSync(clip.caminho, path.join(dir, `${nomeBase}_${path.basename(clip.caminho)}`)); } catch (_) {}
     }
 
-    // Remove video temporario
     try { fs.unlinkSync(info.path); } catch (_) {}
 
   } catch (error) {
