@@ -4,6 +4,7 @@ const handlers = {
     '/ia': require('./ia'),
     '/help': require('./help'),
     '/corte': require('./corte'),
+    '/feedback': require('./feedback'),
 };
 
 function rotear(msg, client, estado) {
