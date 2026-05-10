@@ -125,7 +125,7 @@ async function gerarClipes(videoPath, cortes, nomeBase) {
   for (let i = 0; i < cortes.length; i++) {
     const c = cortes[i];
     const duracao = c.end - c.start
-    const tipo = duracao <= 59 ? 'short' : 'long'
+    const tipo = duracao <= 180 ? 'short' : 'long'
     const dir = tipo === 'long' ? longsDir : shortsDir;
     const nome = `${i + 1}_${(c.titulo || 'corte').replace(/[^a-z0-9]/gi, '_').slice(0, 40)}.mp4`;
     const saida = path.join(dir, nome);

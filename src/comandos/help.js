@@ -6,7 +6,9 @@ function executar(msg, client, estado) {
 *1. /corte URL [inicio-fim ...]*
    Baixa o video, transcreve e gera clipes nos timestamps definidos.
    Aceita: segundos (0-59), minutos (01:21-32:02), ou misto (0-01:30).
-   Sem timestamps: IA analisa e recomenda os melhores cortes.
+   Sem timestamps: baixa o video completo e salva em longs/ (YouTube).
+   Com timestamps ate 3min: formato 9:16 (shorts/reels).
+   Acima de 3min: formato 16:9 (video longo YouTube).
    Ex: /corte https://youtube.com/watch?v=ABC 0-59 01:21-32:02 300-400
 
 *2. /ia PERGUNTA*
