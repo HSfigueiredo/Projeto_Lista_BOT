@@ -3,23 +3,19 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const CORTES_URL = process.env.PROJETO_CORTES_URL || 'http://localhost:3001';
-const TIKTOK_ACCOUNT_ID = process.env.TIKTOK_ACCOUNT_ID;
+const API_URL = process.env.API_IA_URL || 'https://projeto-lista-api.fly.dev';
+const CORTES_URL = process.env.PROJETO_CORTES_URL;
 const TMP_DIR = path.join(__dirname, '..', '..', 'tmp');
 const LIMITE_SEGUNDOS = 3300;
 
-function executarComando(comando, args, timeout = 600000) {
+function executar(comando, args, timeout = 600000) {
   return new Promise((resolve, reject) => {
     const proc = spawn(comando, args, { stdio: 'pipe' });
     let stderr = '';
-    const timer = setTimeout(() => { proc.kill('SIGKILL'); reject(new Error(`${comando} excedeu ${timeout / 1000}s`)); }, timeout);
-    proc.stderr.on('data', (d) => { stderr += d.toString(); });
-    proc.on('close', (code) => {
-      clearTimeout(timer);
-      if (code === 0) resolve();
-      else reject(new Error(stderr.slice(0, 400)));
-    });
-    proc.on('error', (e) => { clearTimeout(timer); reject(e); });
+    const timer = setTimeout(() => { proc.kill('SIGKILL'); reject(new Error(`${comando} excedeu ${timeout / 1000}s`)) }, timeout);
+    proc.stderr.on('data', (d) => { stderr += d.toString() });
+    proc.on('close', (code) => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(stderr.slice(0, 400))) });
+    proc.on('error', (e) => { clearTimeout(timer); reject(e) });
   });
 }
 
@@ -27,164 +23,133 @@ function obterDuracao(url) {
   return new Promise((resolve) => {
     const proc = spawn('yt-dlp', ['--no-check-certificate', '--print', '%(duration)s', url], { stdio: 'pipe', timeout: 60000 });
     let out = '';
-    proc.stdout.on('data', (d) => { out += d.toString(); });
-    proc.on('close', (c) => { resolve(c === 0 ? Number(out.trim().split('\n')[0]) : null); });
+    proc.stdout.on('data', (d) => { out += d.toString() });
+    proc.on('close', (c) => resolve(c === 0 ? Number(out.trim().split('\n')[0]) : null));
     proc.on('error', () => resolve(null));
   });
 }
 
-async function baixarETrimmar(url) {
+async function baixarVideo(url) {
   fs.mkdirSync(TMP_DIR, { recursive: true });
-  const duracao = await obterDuracao(url);
   const ts = Date.now();
+  const videoPath = path.join(TMP_DIR, `video_${ts}.mp4`);
+  const duracao = await obterDuracao(url);
 
   if (duracao && duracao > LIMITE_SEGUNDOS) {
-    const outputPath = path.join(TMP_DIR, `corte_${ts}.mp4`);
-    console.log(`Baixando primeiros ${Math.floor(LIMITE_SEGUNDOS / 60)}min com ffmpeg (480p)`);
-    await executarComando('yt-dlp', [
-      '--no-check-certificate',
-      '--download-sections', `*0-${LIMITE_SEGUNDOS}`,
-      '--downloader', 'ffmpeg',
-      '--force-keyframes-at-cuts',
-      '-f', 'best[height<=480]',
-      '-o', outputPath, url
+    await executar('yt-dlp', [
+      '--no-check-certificate', '--download-sections', `*0-${LIMITE_SEGUNDOS}`,
+      '--downloader', 'ffmpeg', '--force-keyframes-at-cuts',
+      '-f', 'best[height<=480]', '-o', videoPath, url
     ], 1800000);
-    return { path: outputPath, trimmado: true, duracaoOriginal: duracao };
+  } else {
+    await executar('yt-dlp', ['--no-check-certificate', '-f', 'best[height<=480]', '-o', videoPath, url], 1800000);
   }
-
-  const outputPath = path.join(TMP_DIR, `corte_${ts}.mp4`);
-  console.log(`Video curto (${duracao ? Math.round(duracao / 60) + 'min' : '?'}), baixando completo`);
-  await executarComando('yt-dlp', ['--no-check-certificate', '-f', 'best[height<=480]', '-o', outputPath, url], 1800000);
-  return { path: outputPath, trimmado: false };
+  return { path: videoPath, duracao };
 }
 
-async function uploadArquivo(pathArquivo) {
-  const FormData = require('form-data');
-  const nome = path.basename(pathArquivo);
-  const servicos = [
-    {
-      url: 'https://litterbox.catbox.moe/resources/internals/api.php',
-      form: { reqtype: 'fileupload', time: '72h' },
-      campo: 'fileToUpload',
-      extrair: (d) => d.trim()
-    },
-    {
-      url: 'https://catbox.moe/user/api.php',
-      form: { reqtype: 'fileupload' },
-      campo: 'fileToUpload',
-      extrair: (d) => d.trim()
-    },
-  ];
+async function transcrever(audioPath) {
+  const scriptPath = path.join(__dirname, 'transcricao.py');
+  const proc = spawn('python3', [scriptPath, audioPath], { stdio: 'pipe', timeout: 1800000 });
+  let out = '', err = '';
+  proc.stdout.on('data', (d) => { out += d.toString() });
+  proc.stderr.on('data', (d) => { err += d.toString() });
+  return new Promise((resolve, reject) => {
+    proc.on('close', (c) => c === 0 ? resolve(JSON.parse(out)) : reject(new Error(err.slice(0, 300))));
+    proc.on('error', reject);
+  });
+}
 
-  for (const svc of servicos) {
-    try {
-      const form = new FormData();
-      for (const [k, v] of Object.entries(svc.form)) form.append(k, v);
-      form.append(svc.campo, fs.createReadStream(pathArquivo), nome);
-      const resp = await axios.post(svc.url, form, {
-        headers: form.getHeaders(),
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        timeout: 600000
-      });
-      const url = svc.extrair(resp.data);
-      if (url && url.startsWith('http')) return url;
-    } catch (e) {
-      console.log(`Upload para ${svc.url} falhou: ${e.message}`);
-    }
+async function analisar(transcricao) {
+  const prompt = `Voce e um editor de video especializado em criar cortes virais.\n\nAnalise a transcricao abaixo com timestamps e recomende os MELHORES trechos para transformar em clips.\n\nREGRAS:\n- Priorize cortes SHORTS (15-60s, formato 9:16 para TikTok/Reels/Shorts)\n- Crie LONGOS (5-30min, formato 16:9 para YouTube) APENAS se o conteudo tiver muito valor\n- Cada corte deve ser autocontido (fazer sentido sozinho)\n- Avalie: conteudo(0-10), engajamento(0-10), viralidade(0-10), autocontido(0-10)\n- Calcule viralScore = media das 4 notas\n- Use timestamps exatos em segundos\n- Min 2 cortes, max 10\n- ORDENE do MAIOR viralScore para o MENOR\n- Responda APENAS JSON, sem texto extra\n\nFormato:\n[{"titulo":"...","tipo":"short","start":0,"end":0,"razao":"...","conteudo":0,"engajamento":0,"viralidade":0,"autocontido":0,"viralScore":0}]\n\nTranscricao:\n${JSON.stringify(transcricao)}`;
+
+  const resp = await axios.post(`${API_URL}/ia`, {
+    mensagem: prompt, persona: 'preciso', temperatura: 0.3, maxTokens: 4096
+  });
+  const match = resp.data.resposta.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error('Resposta da IA invalida');
+  return JSON.parse(match[0]);
+}
+
+async function gerarClipes(videoPath, cortes, outputDir) {
+  const shortsDir = path.join(outputDir, 'shorts');
+  const longsDir = path.join(outputDir, 'longs');
+  fs.mkdirSync(shortsDir, { recursive: true });
+  fs.mkdirSync(longsDir, { recursive: true });
+  const resultados = [];
+
+  for (let i = 0; i < cortes.length; i++) {
+    const c = cortes[i];
+    const tipo = c.tipo === 'long' ? 'longs' : 'shorts';
+    const dir = tipo === 'longs' ? longsDir : shortsDir;
+    const nome = `${i + 1}_${c.titulo.replace(/[^a-z0-9]/gi, '_').slice(0, 40)}.mp4`;
+    const saida = path.join(dir, nome);
+
+    await executar('ffmpeg', [
+      '-i', videoPath, '-ss', String(c.start), '-to', String(c.end),
+      '-vf', tipo === 'longs'
+        ? 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2'
+        : 'crop=ih*9/16:ih,scale=720:1280',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+      '-c:a', 'aac', '-b:a', '128k', '-y', saida
+    ], 600000);
+
+    resultados.push({ titulo: c.titulo, tipo, caminho: saida, viralScore: c.viralScore, duracao: Math.round((c.end - c.start) * 10) / 10 });
   }
-
-  throw new Error('Todos os servicos de upload falharam. Verifique sua conexao.');
+  return resultados;
 }
 
 async function executar(msg, client, estado) {
   const partes = msg.body.trim().split(/\s+/);
   const url = partes[1];
-  const caption = partes.slice(2).join(' ');
-
-  if (!url) {
-    msg.reply('Formato: /corte URL_DO_YOUTUBE [legenda opcional]\nExemplo: /corte https://www.youtube.com/watch?v=SEU_VIDEO');
-    return;
-  }
-
-  if (!TIKTOK_ACCOUNT_ID) {
-    msg.reply('❌ TIKTOK_ACCOUNT_ID nao configurado nas variaveis de ambiente.');
-    return;
-  }
+  if (!url) { msg.reply('Formato: /corte URL_DO_YOUTUBE'); return; }
 
   msg.reply('⏳ Verificando video...');
-
   try {
-    const duracao = await obterDuracao(url);
+    const info = await baixarVideo(url);
+    msg.reply(info.duracao && info.duracao > LIMITE_SEGUNDOS
+      ? `⏳ Video tem ${Math.round(info.duracao / 60)}min. Baixando primeiros 55min...`
+      : `⏳ Video baixado. Extraindo audio...`);
 
-    let videoUrl = url;
-    let videoType = 2;
-    let arquivoTemp = null;
+    const audioPath = info.path.replace(/\.mp4$/, '.wav');
+    await executar('ffmpeg', ['-i', info.path, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', '-y', audioPath], 300000);
 
-    if (duracao && duracao > LIMITE_SEGUNDOS) {
-      msg.reply(`⏳ Video tem ${Math.round(duracao / 60)}min. Baixando primeiros ${Math.floor(LIMITE_SEGUNDOS / 60)}min...`);
-      const info = await baixarETrimmar(url);
-      arquivoTemp = info.path;
+    msg.reply('⏳ Transcrevendo com IA (Whisper)...');
+    const transcricao = await transcrever(audioPath);
+    try { fs.unlinkSync(audioPath); } catch (_) {}
 
-      msg.reply('⏳ Enviando para servidor de arquivos...');
-      videoUrl = await uploadArquivo(info.path);
+    msg.reply('⏳ Analisando melhores momentos com DeepSeek...');
+    const cortes = await analisar(transcricao);
+    const topCortes = cortes.sort((a, b) => b.viralScore - a.viralScore);
+    const resumo = topCortes.map(c => `🎬 ${c.titulo} (${c.tipo} - ${Math.round((c.end - c.start) * 10) / 10}s - viral: ${c.viralScore})`).join('\n');
+    msg.reply(`🤖 DeepSeek recomenda ${topCortes.length} cortes:\n${resumo}`);
 
-      try { fs.unlinkSync(info.path); } catch (_) {}
-      videoType = 1;
-      msg.reply('⏳ Video hospedado. Enviando para Vizard...');
-    } else if (duracao) {
-      msg.reply(`⏳ Video tem ${Math.round(duracao / 60)}min, dentro do limite.`);
-    } else {
-      msg.reply('⏳ Nao foi possivel verificar duracao, enviando mesmo assim...');
-    }
+    const pasta = path.join(TMP_DIR, `cortes_${Date.now()}`);
+    msg.reply('⏳ Gerando clipes com ffmpeg...');
+    const clipes = await gerarClipes(info.path, topCortes, pasta);
 
-    const body = {
-      url: videoUrl,
-      videoType,
-      ext: videoType === 1 ? 'mp4' : undefined,
-      tiktokAccountId: TIKTOK_ACCOUNT_ID,
-      maxClips: 5,
-      intervaloMinutos: 15
-    };
+    // Tenta salvar no diretorio padrao de Downloads se existir
+    const home = process.env.HOME || process.env.USERPROFILE;
+    const pastaFinal = home ? path.join(home, 'ProjetoCortes', `cortes_${new Date().toISOString().slice(0, 10)}`) : pasta;
+    try {
+      fs.cpSync(pasta, pastaFinal, { recursive: true });
+    } catch (_) {}
 
-    if (caption) body.caption = caption;
+    const shorts = clipes.filter(c => c.tipo === 'short');
+    const longs = clipes.filter(c => c.tipo === 'long');
+    let msgFinal = `✅ ${clipes.length} clipes gerados!\n📁 ${pastaFinal}\n\n`;
+    if (shorts.length) msgFinal += `📱 Shorts (9:16): ${shorts.length}\n`;
+    if (longs.length) msgFinal += `🎥 Longos (16:9): ${longs.length}\n`;
+    msgFinal += `\n🎯 Melhor corte: "${topCortes[0].titulo}" (viralScore: ${topCortes[0].viralScore}/10)`;
+    msg.reply(msgFinal);
 
-    const response = await axios.post(`${CORTES_URL}/clips`, body, {
-      headers: { Authorization: 'Bearer token_teste' }
-    });
-
-    const { jobId } = response.data;
-    msg.reply(`⏳ Cortando video... Job #${jobId}. Acompanhando progresso...`);
-
-    let concluido = false;
-    while (!concluido) {
-      await new Promise((r) => setTimeout(r, 30000));
-
+    if (CORTES_URL) {
       try {
-        const statusRes = await axios.get(`${CORTES_URL}/clips/${jobId}`, {
-          headers: { Authorization: 'Bearer token_teste' }
-        });
-
-        const { status, resultado } = statusRes.data;
-
-        if (status === 'completed') {
-          const pub = resultado?.publicados || 0;
-          const total = resultado?.totalClips || 0;
-          msg.reply(`✅ ${pub} clipes publicados no TikTok!\n🎯 ${total} clipes gerados no total (top ${pub} com maior viral score publicados, 15min de intervalo entre cada).`);
-          concluido = true;
-        } else if (status === 'failed') {
-          const motivo = statusRes.data.erro || (resultado ? JSON.stringify(resultado) : 'erro desconhecido');
-          msg.reply(`❌ Falha ao processar video: ${motivo}`);
-          concluido = true;
-        }
-      } catch (pollErro) {
-        msg.reply(`⚠️ Erro ao verificar status: ${pollErro.message}`);
-        concluido = true;
-      }
+        await axios.post(`${CORTES_URL}/clips`, { url, videoPath: info.path }, { headers: { Authorization: 'Bearer token_teste' }, timeout: 5000 });
+      } catch (_) {}
     }
   } catch (error) {
-    const detalhe = error.response?.data?.mensagem || error.response?.data || error.message || 'erro desconhecido (verifique os logs)';
-    msg.reply(`❌ Erro ao criar job de corte: ${detalhe}`);
+    const detalhe = error.response?.data?.detalhe || error.message || 'erro desconhecido';
+    msg.reply(`❌ Erro: ${detalhe.slice(0, 500)}`);
   }
 }
 
