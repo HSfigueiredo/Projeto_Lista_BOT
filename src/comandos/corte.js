@@ -44,13 +44,31 @@ function obterDuracao(url) {
   });
 }
 
-function parsearTimestamps(args) {
-  const timestamps = [];
-  for (const arg of args) {
-    const match = arg.match(/^(\d+(?:\.\d+)?)[-–](\d+(?:\.\d+)?)$/);
-    if (match) timestamps.push({ start: parseFloat(match[1]), end: parseFloat(match[2]) });
+function converterParaSegundos(str) {
+  str = str.trim().replace(',', '.')
+  if (str.includes(':')) {
+    const partes = str.split(':')
+    if (partes.length === 2) return parseFloat(partes[0]) * 60 + parseFloat(partes[1])
+    if (partes.length === 3) return parseFloat(partes[0]) * 3600 + parseFloat(partes[1]) * 60 + parseFloat(partes[2])
   }
-  return timestamps;
+  return parseFloat(str)
+}
+
+function parsearTimestamps(args) {
+  const timestamps = []
+  for (const arg of args) {
+    const separador = arg.match(/[-–]/)
+    if (!separador) continue
+    const idx = arg.indexOf(separador[0])
+    const startStr = arg.slice(0, idx)
+    const endStr = arg.slice(idx + 1)
+    const start = converterParaSegundos(startStr)
+    const end = converterParaSegundos(endStr)
+    if (!isNaN(start) && !isNaN(end) && end > start) {
+      timestamps.push({ start, end })
+    }
+  }
+  return timestamps
 }
 
 function ajustarParaPalavras(transcricao, timestamps) {

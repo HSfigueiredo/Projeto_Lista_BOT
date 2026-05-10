@@ -3,9 +3,11 @@ function executar(msg, client, estado) {
 
 🤖 *COMANDOS DISPONIVEIS*
 
-*1. /corte URL*
-   Baixa o video, transcreve com Whisper, analisa com DeepSeek e gera clipes.
-   Ex: /corte https://youtube.com/watch?v=...
+*1. /corte URL [inicio-fim ...]*
+   Baixa o video, transcreve e gera clipes nos timestamps definidos.
+   Aceita: segundos (0-59), minutos (01:21-32:02), ou misto (0-01:30).
+   Sem timestamps: IA analisa e recomenda os melhores cortes.
+   Ex: /corte https://youtube.com/watch?v=ABC 0-59 01:21-32:02 300-400
 
 *2. /ia PERGUNTA*
    Consulta a inteligencia artificial (DeepSeek).
